@@ -12,3 +12,4 @@ C:\Users\benja\progge\examassignment4\obj\Debug\net8.0\refint\ExamAssignment4.dl
 C:\Users\benja\progge\examassignment4\obj\Debug\net8.0\ExamAssignment4.pdb
 C:\Users\benja\progge\examassignment4\obj\Debug\net8.0\ExamAssignment4.genruntimeconfig.cache
 C:\Users\benja\progge\examassignment4\obj\Debug\net8.0\ref\ExamAssignment4.dll
+C:\Users\benja\Progge\ExamAssignment4\obj\Debug\net8.0\ExamAssignment4.sourcelink.json
