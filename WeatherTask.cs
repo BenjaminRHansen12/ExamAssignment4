@@ -6,7 +6,7 @@ bool exit = false;
 while (!exit)
 {
     Console.WriteLine("-----------------------------------------");
-    Console.WriteLine("\nTemperature Logger Menu:");
+    Console.WriteLine("Temperature Logger Menu:");
     Console.WriteLine("1. Log Temperature");
     Console.WriteLine("2. View Temperature for Specific Date");
     Console.WriteLine("3. View Temperature for Specific Week");
@@ -52,54 +52,63 @@ while (!exit)
 
 static void LogTemperature(TemperatureLogger logger)
 {
+    Console.Write("Enter the city: ");
+    string city = Console.ReadLine();
     Console.Write("Enter the date (YYYY-MM-DD): ");
     DateTime date = DateTime.Parse(Console.ReadLine());
     Console.Write("Enter the hour of day (0-23): ");
     int hour = int.Parse(Console.ReadLine());
     Console.Write("Enter the temperature in Celsius: ");
     int temperature = int.Parse(Console.ReadLine());
-    logger.LogTemperature(date, hour, temperature);
+    logger.LogTemperature(city, date, hour, temperature);
     Console.WriteLine("Temperature logged successfully!");
     Thread.Sleep(2000);
 }
 
 static void ViewTemperature(TemperatureLogger logger)
 {
+    Console.Write("Enter the city: ");
+    string city = Console.ReadLine();
     Console.Write("Enter the date to view temperature (YYYY-MM-DD): ");
     DateTime viewDate = DateTime.Parse(Console.ReadLine());
-    logger.ViewTemperature(viewDate);
+    logger.ViewTemperature(city, viewDate);
     Thread.Sleep(2000);
 }
 
 static void ViewTemperatureForWeek(TemperatureLogger logger)
 {
+    Console.Write("Enter the city: ");
+    string city = Console.ReadLine();
     Console.Write("Enter the week to view temperature (YYYY-WW): ");
     string weekString = Console.ReadLine();
-    logger.ViewTemperatureForWeek(weekString);
+    logger.ViewTemperatureForWeek(city, weekString);
     Thread.Sleep(2000);
 }
 
 static void ViewTemperatureForMonth(TemperatureLogger logger)
 {
+    Console.Write("Enter the city: ");
+    string city = Console.ReadLine();
     Console.Write("Enter the month to view temperature (YYYY-MM): ");
     string monthString = Console.ReadLine();
-    logger.ViewTemperatureForMonth(monthString);
+    logger.ViewTemperatureForMonth(city, monthString);
     Thread.Sleep(2000);
 }
 
 static void RemoveTemperature(TemperatureLogger logger)
 {
+    Console.Write("Enter the city: ");
+    string city = Console.ReadLine();
     Console.Write("Enter the date to remove temperature (YYYY-MM-DD): ");
     DateTime removeDate = DateTime.Parse(Console.ReadLine());
-    logger.RemoveTemperature(removeDate);
+    logger.RemoveTemperature(city, removeDate);
     Console.WriteLine("Temperature removed successfully!");
     Thread.Sleep(2000);
 }
 
-
 public class TemperatureLogger
 {
-    private Dictionary<DateTime, TemperatureEntry> temperatureRecords;
+    private Dictionary<string, Dictionary<DateTime, TemperatureEntry>> temperatureRecords;
     private string recordsFilePath = "temperature_records.json";
 
     public TemperatureLogger()
@@ -107,26 +116,31 @@ public class TemperatureLogger
         temperatureRecords = LoadTemperatureRecords();
     }
 
-    public void LogTemperature(DateTime date, int hour, int temperature)
+    public void LogTemperature(string city, DateTime date, int hour, int temperature)
     {
-        DateTime shortendDate = date.Date;
-
-        if (!temperatureRecords.ContainsKey(shortendDate))
+        if (!temperatureRecords.ContainsKey(city))
         {
-            temperatureRecords[shortendDate] = new TemperatureEntry();
+            temperatureRecords[city] = new Dictionary<DateTime, TemperatureEntry>();
         }
 
-        temperatureRecords[shortendDate].AddTemperature(hour, temperature);
+        DateTime shortendDate = date.Date;
+
+        if (!temperatureRecords[city].ContainsKey(shortendDate))
+        {
+            temperatureRecords[city][shortendDate] = new TemperatureEntry();
+        }
+
+        temperatureRecords[city][shortendDate].AddTemperature(hour, temperature);
         SaveTemperatureRecords();
     }
 
-    public void ViewTemperature(DateTime date)
+    public void ViewTemperature(string city, DateTime date)
     {
-        if (temperatureRecords.ContainsKey(date.Date))
+        if (temperatureRecords.ContainsKey(city) && temperatureRecords[city].ContainsKey(date.Date))
         {
-            Console.WriteLine($"Temperature records for {date.ToShortDateString()}:");
+            Console.WriteLine($"Temperature records for {city} on {date.ToShortDateString()}:");
 
-            TemperatureEntry entry = temperatureRecords[date.Date];
+            TemperatureEntry entry = temperatureRecords[city][date.Date];
             foreach (var hourTempPair in entry.TemperatureData)
             {
                 Console.WriteLine($"Hour: {hourTempPair.Key}, Temperature: {hourTempPair.Value}°C");
@@ -134,56 +148,73 @@ public class TemperatureLogger
         }
         else
         {
-            Console.WriteLine($"No temperature records found for {date.ToShortDateString()}");
+            Console.WriteLine($"No temperature records found for {city} on {date.ToShortDateString()}");
         }
     }
 
-    public void ViewTemperatureForWeek(string weekString)
+    public void ViewTemperatureForWeek(string city, string weekString)
     {
-        int year = int.Parse(weekString.Split('-')[0]);
-        int week = int.Parse(weekString.Split('-')[1].Substring(1));
-        DateTime startOfWeek = GetFirstDateOfWeekISO8601(year, week);
-        DateTime endOfWeek = startOfWeek.AddDays(6);
-
-        Console.WriteLine($"Temperature records for week {week} of {year}:");
-
-        for (DateTime date = startOfWeek; date <= endOfWeek; date = date.AddDays(1))
+        if (temperatureRecords.ContainsKey(city))
         {
-            ViewTemperature(date);
-            Console.WriteLine();
+            int year = int.Parse(weekString.Split('-')[0]);
+            int week = int.Parse(weekString.Split('-')[1]);
+
+            string formattedWeek = week < 10 ? $"0{week}" : week.ToString();
+
+            DateTime startOfWeek = GetFirstDateOfWeek(year, week);
+            DateTime endOfWeek = startOfWeek.AddDays(6);
+
+            Console.WriteLine($"Temperature records for {city} for week {formattedWeek} of {year}:");
+
+            for (DateTime date = startOfWeek; date <= endOfWeek; date = date.AddDays(1))
+            {
+                ViewTemperature(city, date);
+                Console.WriteLine();
+            }
+        }
+        else
+        {
+            Console.WriteLine($"No temperature records found for {city}");
         }
     }
 
-    public void ViewTemperatureForMonth(string monthString)
+    public void ViewTemperatureForMonth(string city, string monthString)
     {
-        int year = int.Parse(monthString.Split('-')[0]);
-        int month = int.Parse(monthString.Split('-')[1]);
-        DateTime startDate = new DateTime(year, month, 1);
-        DateTime endDate = startDate.AddMonths(1).AddDays(-1);
+        if (temperatureRecords.ContainsKey(city))
+        {
+            int year = int.Parse(monthString.Split('-')[0]);
+            int month = int.Parse(monthString.Split('-')[1]);
+            DateTime startDate = new DateTime(year, month, 1);
+            DateTime endDate = startDate.AddMonths(1).AddDays(-1);
 
-        Console.WriteLine($"Temperature records for {startDate.ToString("MMMM yyyy")}:");
+            Console.WriteLine($"Temperature records for {city} for {startDate.ToString("MMMM yyyy")}:");
         
-        for (DateTime date = startDate; date <= endDate; date = date.AddDays(1))
+            for (DateTime date = startDate; date <= endDate; date = date.AddDays(1))
+            {
+                ViewTemperature(city, date);
+                Console.WriteLine();
+            }
+        }
+        else
         {
-            ViewTemperature(date);
-            Console.WriteLine();
+            Console.WriteLine($"No temperature records found for {city}");
         }
     }
 
-    public void RemoveTemperature(DateTime date)
+    public void RemoveTemperature(string city, DateTime date)
     {
-        if (temperatureRecords.ContainsKey(date.Date))
+        if (temperatureRecords.ContainsKey(city) && temperatureRecords[city].ContainsKey(date.Date))
         {
-            temperatureRecords.Remove(date.Date);
+            temperatureRecords[city].Remove(date.Date);
             SaveTemperatureRecords();
         }
         else
         {
-            Console.WriteLine($"No temperature records found for {date.ToShortDateString()}");
+            Console.WriteLine($"No temperature records found for {city} on {date.ToShortDateString()}");
         }
     }
 
-    private Dictionary<DateTime, TemperatureEntry> LoadTemperatureRecords()
+    private Dictionary<string, Dictionary<DateTime, TemperatureEntry>> LoadTemperatureRecords()
     {
         if (File.Exists(recordsFilePath))
         {
@@ -192,7 +223,7 @@ public class TemperatureLogger
                 string json = File.ReadAllText(recordsFilePath);
                 if (!string.IsNullOrEmpty(json))
                 {
-                    return JsonSerializer.Deserialize<Dictionary<DateTime, TemperatureEntry>>(json);
+                    return JsonSerializer.Deserialize<Dictionary<string, Dictionary<DateTime, TemperatureEntry>>>(json);
                 }
                 else
                 {
@@ -209,7 +240,7 @@ public class TemperatureLogger
             Console.WriteLine("JSON file does not exist.");
         }
 
-        return new Dictionary<DateTime, TemperatureEntry>();
+        return new Dictionary<string, Dictionary<DateTime, TemperatureEntry>>();
     }
 
     private void SaveTemperatureRecords()
@@ -218,7 +249,7 @@ public class TemperatureLogger
         File.WriteAllText(recordsFilePath, json);
     }
 
-    private DateTime GetFirstDateOfWeekISO8601(int year, int week)
+    private DateTime GetFirstDateOfWeek(int year, int week)
     {
         DateTime jan1 = new DateTime(year, 1, 1);
         int daysOffset = (int)DayOfWeek.Thursday - (int)jan1.DayOfWeek;

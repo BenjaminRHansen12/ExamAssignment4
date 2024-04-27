@@ -1,0 +1,11 @@
+*.exe
+*.dll
+*.so
+*.dylib
+
+*.tmp
+*.log
+
+/bin/
+/obj/
+/node_modules/
